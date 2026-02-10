@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Git Practice Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/@gitgraph/js"></script>
+    <style>
+        :root { --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9; --green: #238636; --blue: #58a6ff; --red: #f85149; --yellow: #d29922; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Consolas', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .header { padding: 10px 20px; background: #010409; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .layout { display: flex; flex: 1; gap: 8px; padding: 10px; overflow: hidden; }
+        .column { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); overflow: hidden; }
+        .header-col { padding: 8px; background: var(--bg); border-bottom: 1px solid var(--border); text-align: center; font-size: 11px; text-transform: uppercase; color: #8b949e; }
+        .editor { flex: 1; padding: 15px; overflow-y: auto; font-size: 13px; background: #010409; line-height: 1.6; outline: none; white-space: pre-wrap; color: #7ee787; }
+        .controls { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border-top: 1px solid var(--border); }
+        select, input, button { padding: 8px; border-radius: 4px; border: 1px solid var(--border); background: #21262d; color: white; font-size: 11px; cursor: pointer; }
+        .btn-green { background: var(--green); border: none; font-weight: bold; }
+        .btn-yellow { background: var(--yellow); color: black; border: none; font-weight: bold; }
+        #terminal { background: #000; color: #0f0; font-size: 11px; padding: 10px; height: 100px; overflow-y: auto; border-top: 1px solid var(--border); }
+        #graph-panel { flex: 0.5; background: white; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="font-weight: bold; color: var(--blue)">GIT TRAINER <span style="font-size:10px; border:1px solid; padding:2px 5px; margin-left:10px; border-radius:10px;">MERGE REPAIR</span></div>
+    <div>Branch: <select id="branchSelect" onchange="switchBranch()"></select></div>
+</div>
+
+<div class="layout">
+    <div class="column">
+        <div class="header-col">☁️ Remote Master</div>
+        <div id="remote-editor" class="editor"></div>
+        <div class="controls"><button onclick="simulateRemoteChange()" style="background: var(--red); border:none; grid-column: span 2;">Simulate Teammate Push</button></div>
+    </div>
+
+    <div class="column">
+        <div class="header-col">💻 Local Machine</div>
+        <div id="local-editor" class="editor" contenteditable="false"></div>
+        <div class="controls">
+            <input type="text" id="commitInput" placeholder="Enter new code line..." style="grid-column: span 2;">
+            <button onclick="gitCommit()" class="btn-green">git commit</button>
+            <button onclick="gitPush()" class="btn-green">git push</button>
+            <button onclick="gitPull()" style="background: var(--blue); border:none;">git pull</button>
+            <button onclick="createNewBranch()" style="background: var(--blue); border:none;">git branch</button>
+            <button onclick="gitMerge()" class="btn-yellow">git merge</button>
+            <button onclick="resolveConflict()" id="resBtn" style="display:none; grid-column: span 2; background: var(--yellow); color: black; font-weight: bold;">RESOLVE CONFLICT</button>
+        </div>
+        <div id="terminal"></div>
+    </div>
+
+    <div id="graph-panel"><div id="graph-container"></div></div>
+</div>
+
+<script>
+    const gitgraph = GitgraphJS.createGitgraph(document.getElementById("graph-container"), { template: "metro", orientation: "vertical-reverse" });
+    
+    let branchData = { "master": "// Initial Project Code\nconsole.log('Hello');" };
+    let remoteData = "// Initial Project Code\nconsole.log('Hello');";
+    let branches = { "master": gitgraph.branch("master") };
+    let currentBranchName = "master";
+    let isConflict = false;
+
+    branches["master"].commit("Initial");
+    updateUI();
+
+    function log(msg, color = "#0f0") {
+        const term = document.getElementById("terminal");
+        term.innerHTML += `<div><span style="color:#888">></span> <span style="color:${color}">${msg}</span></div>`;
+        term.scrollTop = term.scrollHeight;
+    }
+
+    function updateUI() {
+        const select = document.getElementById("branchSelect");
+        select.innerHTML = Object.keys(branches).map(b => `<option value="${b}" ${b===currentBranchName?'selected':''}>${b}</option>`).join('');
+        document.getElementById("remote-editor").innerText = remoteData;
+        if (!isConflict) {
+            document.getElementById("local-editor").innerText = branchData[currentBranchName];
+            document.getElementById("resBtn").style.display = "none";
+        }
+    }
+
+    function gitMerge() {
+        if (currentBranchName !== "master") return alert("Switch to 'master' to merge.");
+        const otherBranches = Object.keys(branches).filter(b => b !== "master");
+        if (otherBranches.length === 0) return alert("No branches to merge.");
+        
+        const target = prompt(`Merge which branch? (${otherBranches.join(', ')})`, otherBranches[0]);
+        if (branches[target]) {
+            // THE FIX: Find what's new in the branch and append it
+            const baseContent = branchData["master"];
+            const branchContent = branchData[target];
+            
+            // This logic appends unique lines from the feature branch
+            const newLines = branchContent.split('\n').filter(line => !baseContent.split('\n').includes(line));
+            
+            if (newLines.length > 0) {
+                branchData["master"] += "\n" + newLines.join('\n');
+                branches["master"].merge(branches[target]);
+                log(`git merge ${target}: Success. Added ${newLines.length} lines.`, "var(--yellow)");
+            } else {
+                log(`git merge ${target}: No new changes to merge.`);
+            }
+            updateUI();
+        }
+    }
+
+    function gitCommit() {
+        const val = document.getElementById("commitInput").value;
+        if (!val || isConflict) return;
+        branchData[currentBranchName] += "\n" + val;
+        branches[currentBranchName].commit(val);
+        document.getElementById("commitInput").value = "";
+        log(`git commit: Added "${val}"`);
+        updateUI();
+    }
+
+    function gitPull() {
+        if (branchData["master"] !== remoteData && !remoteData.startsWith(branchData["master"])) {
+            isConflict = true;
+            document.getElementById("resBtn").style.display = "block";
+            document.getElementById("local-editor").contentEditable = "true";
+            document.getElementById("local-editor").innerText = `<<<<<<< HEAD\n${branchData["master"]}\n=======\n${remoteData}\n>>>>>>> origin/master`;
+            log("CONFLICT during pull!", "var(--red)");
+        } else {
+            branchData["master"] = remoteData;
+            log("git pull: Master updated.");
+            updateUI();
+        }
+    }
+
+    function resolveConflict() {
+        const localDiv = document.getElementById("local-editor");
+        if (localDiv.innerText.includes("<<<<<<<")) return alert("Clean markers!");
+        branchData["master"] = localDiv.innerText.trim();
+        isConflict = false;
+        localDiv.contentEditable = "false";
+        branches["master"].commit("Resolved merge conflict");
+        updateUI();
+    }
+
+    function gitPush() {
+        if (currentBranchName !== "master") return log("Push only from master.");
+        if (remoteData.length > branchData["master"].length && !remoteData.includes(branchData["master"])) {
+            log("Rejected: Pull first!", "var(--red)");
+            return;
+        }
+        remoteData = branchData["master"];
+        log("git push: SUCCESS", "var(--green)");
+        updateUI();
+    }
+
+    function createNewBranch() {
+        const name = prompt("Branch name:");
+        if (name && !branches[name]) {
+            branches[name] = branches[currentBranchName].branch(name);
+            branchData[name] = branchData[currentBranchName];
+            currentBranchName = name;
+            log(`git checkout -b ${name}`);
+            updateUI();
+        }
+    }
+
+    function switchBranch() {
+        currentBranchName = document.getElementById("branchSelect").value;
+        updateUI();
+    }
+
+    function simulateRemoteChange() {
+        remoteData += "\n// Added by teammate";
+        branches["master"].commit("Remote Change");
+        updateUI();
+    }
+</script>
+</body>
+</html>
