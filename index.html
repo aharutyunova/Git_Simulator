@@ -2,366 +2,270 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Git Practice Simulator - Merge Added</title>
+    <title>Qwallity GitLab</title>
     <script src="https://cdn.jsdelivr.net/npm/@gitgraph/js"></script>
 <style>
     :root { 
-        --bg: #0d1117; 
-        --panel: #161b22; 
-        --border: #30363d; 
-        --text: #c9d1d9; 
-        --green: #238636;  /* Standard Git Green */
-        --blue: #2980b9;   /* Deeper Blue to contrast Orange */
-        --red: #f85149; 
-        --yellow: #f1c40f; 
-        --brand-orange: #df691a; /* Your Qwallity Orange */
+        --bg-deep: #0f172a;    
+        --panel: #1e293b;      
+        --border: #334155;     
+        --text: #f1f5f9;       
+        --orange: #f97316;     
+        --green-btn: #22c55e;  
+        --blue-btn: #3b82f6;   
+        --editor-bg: #000000;  
+        --code-text: #e2e8f0; 
+        --main-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    body { 
-        margin: 0; 
-        background: var(--bg); 
-        color: var(--text); 
-        font-family: 'Consolas', 'Monaco', monospace; 
-        display: flex; 
-        flex-direction: column; 
-        height: 100vh; 
-        overflow: hidden; 
+    body { margin: 0; background: var(--bg-deep); color: var(--text); font-family: var(--main-font); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .header { padding: 12px 20px; background: var(--bg-deep); border-bottom: 2px solid var(--orange); display: flex; justify-content: space-between; align-items: center; }
+    .brand-title { font-weight: bold; color: var(--orange); font-size: 1.1rem; letter-spacing: 1px; }
+    
+    .layout { display: flex; flex: 1; gap: 12px; padding: 12px; overflow: hidden; }
+    .column { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); overflow: hidden; }
+    .header-col { padding: 8px 4px; background: var(--panel); border-bottom: 1px solid var(--border); text-align: center; font-size: 10px; color: #cbd5e1; font-weight: bold; text-transform: uppercase; }
+    
+    .editor { flex: 1; padding: 16px; font-size: 14px; background: var(--editor-bg); outline: none; white-space: pre-wrap; color: var(--code-text); overflow-y: auto; line-height: 1.6; font-family: 'Consolas', monospace; border: none; }
+    .controls { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--border); background: var(--panel); }
+    
+    button { padding: 10px; border-radius: 4px; border: 1px solid var(--border); background: #334155; color: white; cursor: pointer; font-size: 11px; font-weight: bold; }
+    button:hover { filter: brightness(1.2); }
+
+    .btn-orange, #resolve-btn { background: var(--orange) !important; border: none; color: white !important; }
+    #resolve-btn { display: none; grid-column: span 2; margin-bottom: 4px; animation: pulse 2s infinite; }
+    
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    .btn-green { background: var(--green-btn) !important; color: #052e16 !important; border: none; }
+    .btn-blue { background: var(--blue-btn) !important; border: none; }
+
+    #terminal { background: #020617; color: #e2e8f0; font-size: 12px; padding: 12px; height: 140px; border-top: 1px solid var(--border); overflow-y: auto; font-family: 'Consolas', monospace; }
+    
+    #graph-panel { width: 340px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+    #graph-container-wrapper { flex: 1; overflow-y: auto; padding: 10px; background: var(--panel); }
+    #graph-container { min-height: 100%; }
+    
+    input { grid-column: span 2; padding: 10px; background: var(--editor-bg); color: white; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 4px; outline: none; }
+    select { background: var(--editor-bg); color: white; border: 1px solid var(--border); padding: 4px; border-radius: 4px; outline: none; }
+
+    /* HELP MODAL & BUTTON */
+    .help-trigger {
+        position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px; 
+        border-radius: 50%; background: var(--orange); color: white; border: none;
+        font-weight: bold; font-size: 20px; cursor: pointer; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
-
-    .header { 
-        padding: 10px 20px; 
-        background: #010409; 
-        border-bottom: 1px solid var(--border); 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
+    #help-modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
     }
-
-    .layout { display: flex; flex: 1; gap: 8px; padding: 10px; overflow: hidden; }
-
-    .column { 
-        flex: 1; 
-        display: flex; 
-        flex-direction: column; 
-        border: 1px solid var(--border); 
-        border-radius: 8px; 
-        background: var(--panel); 
-        overflow: hidden; 
+    .help-content {
+        background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid var(--orange);
+        max-width: 500px; width: 90%; color: var(--text); position: relative;
     }
-
-    .header-col { 
-        padding: 8px; 
-        background: #161b22; 
-        border-bottom: 1px solid var(--border); 
-        text-align: center; 
-        font-size: 11px; 
-        text-transform: uppercase; 
-        color: #8b949e; 
-        font-weight: bold;
-    }
-
-    .editor { 
-        flex: 1; 
-        padding: 15px; 
-        overflow-y: auto; 
-        font-size: 13px; 
-        background: #010409; 
-        line-height: 1.6; 
-        outline: none; 
-        white-space: pre-wrap; 
-        color: #7ee787; /* Code Green */
-        border: 2px solid transparent; 
-    }
-
-    /* Primary Action Buttons */
-    .btn-green { 
-        background: var(--green) !important; 
-        color: #ffffff;
-        border: none; 
-        font-weight: bold; 
-        transition: opacity 0.2s;
-    }
-
-    /* Secondary Action Buttons (Pull/Branch) */
-    .btn-blue {
-        background: var(--blue) !important;
-        color: #ffffff;
-        border: none;
-    }
-
-    /* Alert/Merge Buttons */
-    .btn-yellow {
-        background: var(--brand-orange) !important;
-        color: white;
-        border: none;
-        font-weight: bold;
-    }
-
-    .controls { 
-        padding: 12px; 
-        display: grid; 
-        grid-template-columns: 1fr 1fr; 
-        gap: 8px; 
-        border-top: 1px solid var(--border); 
-        background: var(--panel);
-    }
-
-    button:hover { opacity: 0.8; }
-
-    select, input, button { 
-        padding: 10px; 
-        border-radius: 6px; 
-        border: 1px solid var(--border); 
-        background: #21262d; 
-        color: white; 
-        font-size: 12px; 
-        cursor: pointer; 
-    }
-
-    #terminal { 
-        background: #000; 
-        color: #0f0; 
-        font-size: 11px; 
-        padding: 10px; 
-        height: 100px; 
-        overflow-y: auto; 
-        border-top: 1px solid var(--border); 
-        font-family: 'Courier New', monospace;
-    }
-
-    /* GitGraph Panel Sync */
-#graph-panel {
-    width: 500px; 
-    flex-shrink: 0; 
-    background: var(--bg);
-    padding: 10px;
-    border-left: 1px solid var(--border);
-    overflow-x: hidden; 
-}
-
-
-#graph-container {
-    background: var(--panel);
-    padding: 10px;
-    border-radius: 8px;
-    min-height: 100%;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-
-#graph-container svg {
-    max-width: 100%;
-    height: auto;
-}
-#graph-container svg text {
-    font-size: 14px !important;   
-}
-
+    .help-content h2 { margin-top: 0; color: var(--orange); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .help-step { margin-bottom: 15px; font-size: 14px; }
+    .help-step b { color: var(--orange); }
 </style>
 </head>
 <body>
 
+<button class="help-trigger" onclick="toggleHelp()">?</button>
+<div id="help-modal" onclick="toggleHelp()">
+    <div class="help-content" onclick="event.stopPropagation()">
+        <h2>🚀 Quick Start Guide</h2>
+        <div class="help-step"><b>1. Save Changes:</b> Type in the Local Workstation. Click <b>git add .</b> then <b>git commit</b> to save to history.</div>
+        <div class="help-step"><b>2. Sync with Cloud:</b> Use <b>git push</b> to send your code to the Remote, or <b>git pull</b> to get updates from teammates.</div>
+        <div class="help-step"><b>3. Branching:</b> Click <b>git branch</b> to create a new experiment. Use the dropdown to switch between them.</div>
+        <div class="help-step"><b>4. Merge Conflicts:</b> If <b>git pull</b> causes a conflict, edit the text to remove the <<<< markers, click <b>Mark as Resolved</b>, and then <b>git commit</b>.</div>
+        <button onclick="toggleHelp()" class="btn-orange" style="width:100%; margin-top:10px;">Got it, let's go!</button>
+    </div>
+</div>
+
 <div class="header">
-    <div style="font-weight: bold; color: #df691a;">QWALLITY Git Lab</div>
-    <div>Branch: <select id="branchSelect" onchange="switchBranch()"></select></div>
+    <div class="brand-title">Qwallity GitLab</div>
+    <div style="font-size: 0.8rem;">Active Branch: <select id="branchSelect" onchange="switchBranch()"></select></div>
 </div>
 
 <div class="layout">
     <div class="column">
-        <div class="header-col">☁️ Remote (origin/master)</div>
+        <div class="header-col">Cloud: Remote (origin)</div>
         <div id="remote-editor" class="editor"></div>
-        <div class="controls"><button onclick="simulateRemoteChange()" style="background: #df691a; border:none; grid-column: span 2;">Simulate Teammate Push</button></div>
+        <div class="controls">
+            <button onclick="simulateRemotePush()" class="btn-orange" style="grid-column: span 2;">Simulate Teammate Push</button>
+        </div>
     </div>
 
     <div class="column">
-        <div class="header-col">💻 Local Machine</div>
-        <div id="local-editor" class="editor" contenteditable="false"></div>
+        <div class="header-col">Local: Workstation</div>
+        <div id="local-editor" class="editor" contenteditable="true"></div>
         <div class="controls">
-            <input type="text" id="commitInput" placeholder="Commit message..." style="grid-column: span 2;">
+            <input type="text" id="commitInput" placeholder="Enter commit message...">
+            <button id="resolve-btn" onclick="markAsResolved()">Mark as Resolved</button>
+            <button onclick="gitAdd()" class="btn-blue">git add .</button>
             <button onclick="gitCommit()" class="btn-green">git commit</button>
             <button onclick="gitPush()" class="btn-green">git push</button>
-            <button onclick="gitPull()" style="background: var(--blue); border:none;">git pull</button>
-            <button onclick="createNewBranch()" style="background: var(--blue); border:none;">git branch</button>
-            <button onclick="gitMerge()" class="btn-yellow">git merge</button>
-            <button onclick="resolveConflict()" id="resBtn" style="display:none; grid-column: span 2; background: var(--yellow); color: black; font-weight: bold;">RESOLVE CONFLICT</button>
+            <button onclick="gitPull()" class="btn-blue">git pull</button>
+            <button onclick="createNewBranch()">git branch</button>
+            <button onclick="gitMerge()" class="btn-orange">git merge</button>
         </div>
         <div id="terminal"></div>
     </div>
 
-    <div id="graph-panel"><div id="graph-container"></div></div>
+    <div id="graph-panel">
+        <div class="header-col">Visual History</div>
+        <div id="graph-container-wrapper">
+            <div id="graph-container"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-    const gitgraph = GitgraphJS.createGitgraph(document.getElementById("graph-container"), { template: "metro", orientation: "vertical-reverse" });
+    // HELP LOGIC
+    function toggleHelp() {
+        const modal = document.getElementById('help-modal');
+        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    const uiFont = "12px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    const gitgraph = GitgraphJS.createGitgraph(document.getElementById("graph-container"), { 
+        template: GitgraphJS.templateExtend("metro", {
+            colors: ["#f97316", "#3b82f6", "#22c55e", "#a855f7", "#eab308"],
+            commit: { message: { displayAuthor: false, displayHash: false, font: uiFont }, dot: { size: 10 } },
+            branch: { label: { font: uiFont }, lineWidth: 3 }
+        }), 
+        orientation: "vertical-reverse" 
+    });
     
-    let branchData = { "master": "// Initial Code" };
-    let remoteData = "// Initial Code";
+    let branchData = { "master": "Line 1\nLine 2\nLine 3" };
+    let remoteData = "Line 1\nLine 2\nLine 3";
+    let lastPulledRemote = remoteData; 
+    let stagedData = null; 
+    let isConflictMode = false;
+    let resolved = false;
     let branches = { "master": gitgraph.branch("master") };
     let currentBranchName = "master";
-    
-    let isConflict = false;
-    let needsCommitAfterResolve = false;
-    let hasMergedRemote = false;
-    let mergeSourceBranch = ""; // Tracks which branch is being merged in
 
-    branches["master"].commit("Initial");
-    updateUI();
+    branches["master"].commit("Initial Setup");
+    updateUI(true);
 
-    function log(msg, color = "#0f0") {
+    function log(msg, color = "#cbd5e1") {
         const term = document.getElementById("terminal");
-        term.innerHTML += `<div><span style="color:#888">></span> <span style="color:${color}">${msg}</span></div>`;
+        term.innerHTML += `<div><span style="color:#64748b;">$</span> <span style="color:${color}">${msg}</span></div>`;
         term.scrollTop = term.scrollHeight;
     }
 
-    function updateUI() {
+    function updateUI(refreshLocal = false) {
+        document.getElementById("remote-editor").innerText = remoteData;
+        if (refreshLocal) document.getElementById("local-editor").innerText = branchData[currentBranchName];
+        document.getElementById("resolve-btn").style.display = isConflictMode ? "block" : "none";
         const select = document.getElementById("branchSelect");
         select.innerHTML = Object.keys(branches).map(b => `<option value="${b}" ${b===currentBranchName?'selected':''}>${b}</option>`).join('');
-        document.getElementById("remote-editor").innerText = remoteData;
         
-        const localEditor = document.getElementById("local-editor");
-        if (!isConflict) {
-            localEditor.innerText = branchData[currentBranchName];
-            localEditor.contentEditable = "false";
-            localEditor.classList.remove("conflict-mode");
-            document.getElementById("resBtn").style.display = "none";
-        }
+        const wrapper = document.getElementById("graph-container-wrapper");
+        setTimeout(() => { wrapper.scrollTop = wrapper.scrollHeight; }, 50);
     }
 
-    function gitMerge() {
-        const target = prompt("Enter branch name to merge INTO " + currentBranchName + ":");
-        if (!target || !branches[target]) return log("Branch not found.", "var(--red)");
-        if (target === currentBranchName) return log("Cannot merge branch into itself.");
-
-        log(`git merge ${target}`);
-        
-        if (branchData[target].trim() === branchData[currentBranchName].trim()) {
-            log("Already up to date.");
-        } else {
-            // Check for conflict (simulated by checking if content of target is just an addition)
-            if (branchData[target].includes(branchData[currentBranchName])) {
-                // Fast-forward
-                branchData[currentBranchName] = branchData[target];
-                branches[currentBranchName].merge(branches[target]);
-                log(`Fast-forward: ${currentBranchName} updated.`, "var(--blue)");
-            } else {
-                // Conflict
-                isConflict = true;
-                mergeSourceBranch = target;
-                const localEditor = document.getElementById("local-editor");
-                localEditor.contentEditable = "true";
-                localEditor.classList.add("conflict-mode");
-                localEditor.innerText = `<<<<<<< HEAD (${currentBranchName})\n${branchData[currentBranchName]}\n=======\n${branchData[target]}\n>>>>>>> ${target}`;
-                document.getElementById("resBtn").style.display = "block";
-                log("CONFLICT! Merge conflict in file. Resolve and click button.", "var(--red)");
-            }
+    function markAsResolved() {
+        const content = document.getElementById("local-editor").innerText;
+        if (content.includes("<<<<<<<")) {
+            log("Error: Clear conflict markers first!", "#f87171");
+            return;
         }
+        resolved = true;
+        isConflictMode = false;
+        stagedData = content;
         updateUI();
+        log("Conflict resolved. Commit to finalize.", "#fb923c");
     }
 
-    function gitPull() {
-        log("git pull origin master");
-        hasMergedRemote = false;
-
-        if (remoteData.trim() !== branchData["master"].trim()) {
-            if (remoteData.trim().startsWith(branchData["master"].trim())) {
-                branchData["master"] = remoteData;
-                log("Fast-forward: Local updated.", "var(--blue)");
-            } else {
-                isConflict = true;
-                mergeSourceBranch = "origin/master";
-                const localEditor = document.getElementById("local-editor");
-                localEditor.contentEditable = "true";
-                localEditor.classList.add("conflict-mode");
-                localEditor.innerText = `<<<<<<< HEAD\n${branchData["master"]}\n=======\n${remoteData}\n>>>>>>> origin/master`;
-                document.getElementById("resBtn").style.display = "block";
-                log("CONFLICT! Fix file then RESOLVE.", "var(--red)");
-            }
-        } else {
-            log("Already up to date.");
-        }
-        updateUI();
-    }
-
-    function resolveConflict() {
-        const localDiv = document.getElementById("local-editor");
-        if (localDiv.innerText.includes("<<<<<<<")) return alert("Remove markers!");
-        
-        branchData[currentBranchName] = localDiv.innerText.trim();
-        isConflict = false;
-        needsCommitAfterResolve = true;
-        
-        log("Conflict resolved locally. 'git commit' to complete merge.", "var(--yellow)");
-        updateUI();
+    function gitAdd() {
+        if (isConflictMode) return log("Action blocked: Resolve conflict first!", "#fb923c");
+        stagedData = document.getElementById("local-editor").innerText;
+        log("Changes staged.");
     }
 
     function gitCommit() {
-        const msgInput = document.getElementById("commitInput");
-        const msg = msgInput.value || "Update";
-        if (isConflict) return log("Resolve conflicts first!", "var(--red)");
-
-        if (needsCommitAfterResolve) {
-            const finalMsg = mergeSourceBranch ? `Merge branch '${mergeSourceBranch}'` : "Merge resolution";
-            
-            // Visual merge on graph if it was a branch merge
-            if (branches[mergeSourceBranch]) {
-                branches[currentBranchName].merge(branches[mergeSourceBranch]);
-            } else {
-                branches[currentBranchName].commit(finalMsg);
-            }
-
-            needsCommitAfterResolve = false;
-            hasMergedRemote = (mergeSourceBranch === "origin/master");
-            mergeSourceBranch = "";
-            log(`git commit: ${finalMsg} completed.`, "var(--green)");
-        } else {
-            branchData[currentBranchName] += "\n" + msg;
-            branches[currentBranchName].commit(msg);
-            log(`git commit: ${msg}`);
-            hasMergedRemote = false;
-        }
-        msgInput.value = "";
+        const msg = document.getElementById("commitInput").value.trim();
+        if (!msg) return log("Error: Message required.", "#f87171");
+        
+        const dataToCommit = stagedData || document.getElementById("local-editor").innerText;
+        branchData[currentBranchName] = dataToCommit;
+        branches[currentBranchName].commit(msg);
+        
+        if (resolved) { lastPulledRemote = remoteData; }
+        log(`Committed: ${msg}`, "#4ade80");
+        stagedData = null; resolved = false; isConflictMode = false;
+        document.getElementById("commitInput").value = "";
         updateUI();
     }
 
     function gitPush() {
-        if (currentBranchName !== "master") return log("Sim: Push from master only.");
-        if (isConflict) return log("Rejected: Resolve conflicts before pushing.", "var(--red)");
-        if (needsCommitAfterResolve) return log("Rejected: Commit merge resolution first.", "var(--yellow)");
-
-        const contentMatches = branchData["master"].trim().includes(remoteData.trim());
-
-        if (hasMergedRemote || contentMatches) {
-            remoteData = branchData["master"];
-            hasMergedRemote = false; 
-            log("git push: SUCCESS! Remote updated.", "var(--green)");
-        } else {
-            log("Rejected: Remote contains work you don't have. Pull first!", "var(--red)");
+        if (remoteData !== lastPulledRemote) {
+            log("Push Rejected: Remote is ahead. Pull first.", "#f87171");
+            return;
         }
+        remoteData = branchData[currentBranchName]; 
+        lastPulledRemote = remoteData; 
         updateUI();
+        log("Pushed successfully.", "#4ade80");
     }
 
-    function simulateRemoteChange() {
-        remoteData += "\n// Change from teammate";
-        log("Teammate pushed to remote.", "var(--red)");
+    function gitPull() {
+        log("Fetching from origin...");
+        handleMergeLogic(remoteData, "origin/master", document.getElementById("local-editor").innerText, true);
+    }
+
+    function gitMerge() {
+        const target = prompt("Merge branch:");
+        if (!target || !branches[target]) return log("Error: Branch not found.", "#f87171");
+        branches[currentBranchName].merge(branches[target]);
+        handleMergeLogic(branchData[target], target, document.getElementById("local-editor").innerText, false);
+    }
+
+    function handleMergeLogic(incomingContent, incomingName, currentLocal, isPull) {
+        const incoming = incomingContent.trim();
+        const local = currentLocal.trim();
+
+        if (incoming === local) {
+            log("Already up to date.");
+            return;
+        }
+
+        if (incoming.includes(local) || local.includes(incoming)) {
+            branchData[currentBranchName] = incoming.length > local.length ? incomingContent : currentLocal;
+            if (isPull) lastPulledRemote = remoteData; 
+            updateUI(true);
+            log(`Clean merge from ${incomingName}.`, "#4ade80");
+        } else {
+            isConflictMode = true; resolved = false;
+            const conflictText = `<<<<<<< HEAD (${currentBranchName})\n${currentLocal}\n=======\n${incomingContent}\n>>>>>>> ${incomingName}`;
+            document.getElementById("local-editor").innerText = conflictText;
+            updateUI();
+            log("MERGE CONFLICT!", "#fb923c");
+        }
+    }
+
+    function simulateRemotePush() {
+        remoteData += "\n// Remote Change";
         updateUI();
+        log("Remote updated. You are behind.", "#fb923c");
     }
 
     function createNewBranch() {
-        const name = prompt("Branch name:");
+        const name = prompt("New branch name:");
         if (name && !branches[name]) {
             branches[name] = branches[currentBranchName].branch(name);
-            branchData[name] = branchData[currentBranchName];
+            branchData[name] = document.getElementById("local-editor").innerText;
             currentBranchName = name;
-            log(`git checkout -b ${name}`);
-            updateUI();
+            updateUI(true);
+            log(`Branch ${name} created.`);
         }
     }
 
     function switchBranch() {
         currentBranchName = document.getElementById("branchSelect").value;
-        log(`git checkout ${currentBranchName}`);
-        updateUI();
+        updateUI(true);
+        log(`Switched to ${currentBranchName}`);
     }
 </script>
 </body>
