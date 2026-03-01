@@ -142,6 +142,8 @@
     let stagedData = null; 
     let isConflictMode = false;
     let resolved = false;
+    let pendingMergeTarget = null;
+
     let branches = { "master": gitgraph.branch("master") };
     let currentBranchName = "master";
 
@@ -156,93 +158,158 @@
 
     function updateUI(refreshLocal = false) {
         document.getElementById("remote-editor").innerText = remoteData;
-        if (refreshLocal) document.getElementById("local-editor").innerText = branchData[currentBranchName];
+        if (refreshLocal)
+            document.getElementById("local-editor").innerText = branchData[currentBranchName];
+
         document.getElementById("resolve-btn").style.display = isConflictMode ? "block" : "none";
+
         const select = document.getElementById("branchSelect");
-        select.innerHTML = Object.keys(branches).map(b => `<option value="${b}" ${b===currentBranchName?'selected':''}>${b}</option>`).join('');
-        
+        select.innerHTML = Object.keys(branches)
+            .map(b => `<option value="${b}" ${b===currentBranchName?'selected':''}>${b}</option>`)
+            .join('');
+
         const wrapper = document.getElementById("graph-container-wrapper");
         setTimeout(() => { wrapper.scrollTop = wrapper.scrollHeight; }, 50);
     }
 
-    function markAsResolved() {
-        const content = document.getElementById("local-editor").innerText;
-        if (content.includes("<<<<<<<")) {
-            log("Error: Clear conflict markers first!", "#f87171");
-            return;
-        }
-        resolved = true;
-        isConflictMode = false;
-        stagedData = content;
-        updateUI();
-        log("Conflict resolved. Commit to finalize.", "#fb923c");
-    }
-
+    // -----------------------------
+    // FIXED: git add required
+    // -----------------------------
     function gitAdd() {
-        if (isConflictMode) return log("Action blocked: Resolve conflict first!", "#fb923c");
+        if (isConflictMode && !resolved)
+            return log("Resolve conflict first!", "#fb923c");
+
         stagedData = document.getElementById("local-editor").innerText;
         log("Changes staged.");
     }
 
+    // -----------------------------
+    // FIXED: commit requires add
+    // -----------------------------
     function gitCommit() {
+
+        if (isConflictMode && !resolved)
+            return log("Resolve conflict before committing!", "#f87171");
+
+        if (!stagedData)
+            return log("Nothing to commit. Use git add first.", "#f87171");
+
         const msg = document.getElementById("commitInput").value.trim();
-        if (!msg) return log("Error: Message required.", "#f87171");
-        
-        const dataToCommit = stagedData || document.getElementById("local-editor").innerText;
-        branchData[currentBranchName] = dataToCommit;
-        branches[currentBranchName].commit(msg);
-        
-        if (resolved) { lastPulledRemote = remoteData; }
-        log(`Committed: ${msg}`, "#4ade80");
-        stagedData = null; resolved = false; isConflictMode = false;
+        if (!msg)
+            return log("Error: Message required.", "#f87171");
+
+        branchData[currentBranchName] = stagedData;
+
+        // If this was a merge commit
+        if (pendingMergeTarget) {
+            branches[currentBranchName].merge(branches[pendingMergeTarget]);
+            pendingMergeTarget = null;
+        } else {
+            branches[currentBranchName].commit(msg);
+        }
+
+        if (resolved)
+            lastPulledRemote = remoteData;
+
+        stagedData = null;
+        resolved = false;
+        isConflictMode = false;
         document.getElementById("commitInput").value = "";
-        updateUI();
+
+        updateUI(true);
+        log(`Committed: ${msg}`, "#4ade80");
     }
 
     function gitPush() {
-        if (remoteData !== lastPulledRemote) {
-            log("Push Rejected: Remote is ahead. Pull first.", "#f87171");
-            return;
-        }
-        remoteData = branchData[currentBranchName]; 
-        lastPulledRemote = remoteData; 
+        if (remoteData !== lastPulledRemote)
+            return log("Push Rejected: Remote is ahead. Pull first.", "#f87171");
+
+        remoteData = branchData[currentBranchName];
+        lastPulledRemote = remoteData;
         updateUI();
         log("Pushed successfully.", "#4ade80");
     }
 
     function gitPull() {
+        if (isConflictMode)
+            return log("Resolve current conflict first!", "#f87171");
+
         log("Fetching from origin...");
-        handleMergeLogic(remoteData, "origin/master", document.getElementById("local-editor").innerText, true);
+        handleMergeLogic(remoteData, "origin/master", true);
     }
 
     function gitMerge() {
+        if (isConflictMode)
+            return log("Resolve current conflict first!", "#f87171");
+
         const target = prompt("Merge branch:");
-        if (!target || !branches[target]) return log("Error: Branch not found.", "#f87171");
-        branches[currentBranchName].merge(branches[target]);
-        handleMergeLogic(branchData[target], target, document.getElementById("local-editor").innerText, false);
+        if (!target || !branches[target])
+            return log("Error: Branch not found.", "#f87171");
+
+        handleMergeLogic(branchData[target], target, false);
     }
 
-    function handleMergeLogic(incomingContent, incomingName, currentLocal, isPull) {
+    // -----------------------------
+    // FIXED MERGE LOGIC
+    // -----------------------------
+    function handleMergeLogic(incomingContent, incomingName, isPull) {
+
+        const localContent = document.getElementById("local-editor").innerText;
+
         const incoming = incomingContent.trim();
-        const local = currentLocal.trim();
+        const local = localContent.trim();
 
         if (incoming === local) {
             log("Already up to date.");
             return;
         }
 
+        // CLEAN MERGE
         if (incoming.includes(local) || local.includes(incoming)) {
-            branchData[currentBranchName] = incoming.length > local.length ? incomingContent : currentLocal;
-            if (isPull) lastPulledRemote = remoteData; 
+
+            branchData[currentBranchName] =
+                incoming.length > local.length ? incomingContent : localContent;
+
+            if (isPull) {
+                lastPulledRemote = remoteData;
+                branches[currentBranchName].commit("Merge remote changes");
+            } else {
+                branches[currentBranchName].merge(branches[incomingName]);
+            }
+
             updateUI(true);
             log(`Clean merge from ${incomingName}.`, "#4ade80");
-        } else {
-            isConflictMode = true; resolved = false;
-            const conflictText = `<<<<<<< HEAD (${currentBranchName})\n${currentLocal}\n=======\n${incomingContent}\n>>>>>>> ${incomingName}`;
+        }
+        // CONFLICT
+        else {
+            isConflictMode = true;
+            resolved = false;
+            pendingMergeTarget = isPull ? null : incomingName;
+
+            const conflictText =
+`<<<<<<< HEAD (${currentBranchName})
+${localContent}
+=======
+${incomingContent}
+>>>>>>> ${incomingName}`;
+
             document.getElementById("local-editor").innerText = conflictText;
+
             updateUI();
             log("MERGE CONFLICT!", "#fb923c");
         }
+    }
+
+    function markAsResolved() {
+        const content = document.getElementById("local-editor").innerText;
+
+        if (content.includes("<<<<<<<"))
+            return log("Error: Clear conflict markers first!", "#f87171");
+
+        resolved = true;
+        isConflictMode = false;
+
+        log("Conflict resolved. Run git add, then git commit.", "#fb923c");
     }
 
     function simulateRemotePush() {
@@ -252,6 +319,9 @@
     }
 
     function createNewBranch() {
+        if (isConflictMode)
+            return log("Resolve conflict before branching.", "#f87171");
+
         const name = prompt("New branch name:");
         if (name && !branches[name]) {
             branches[name] = branches[currentBranchName].branch(name);
@@ -263,6 +333,9 @@
     }
 
     function switchBranch() {
+        if (isConflictMode)
+            return log("Resolve conflict before switching.", "#f87171");
+
         currentBranchName = document.getElementById("branchSelect").value;
         updateUI(true);
         log(`Switched to ${currentBranchName}`);
