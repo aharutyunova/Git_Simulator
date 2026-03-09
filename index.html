@@ -156,12 +156,13 @@ function gitCommit() {
 
     branchData[currentBranchName] = stagedData;
 
-    if (pendingMergeTarget) {
-        branches[currentBranchName].merge(branches[pendingMergeTarget]);
-        pendingMergeTarget = null;
-    } else {
-        branches[currentBranchName].commit(msg);
-    }
+	 if (pendingMergeTarget) {
+		branches[currentBranchName].commit(`Merge ${pendingMergeTarget}`);
+		lastPulledRemote = remoteData;
+		pendingMergeTarget = null;
+	} else {
+		branches[currentBranchName].commit(msg);
+	}
 
     if (resolved)
         lastPulledRemote = remoteData;
@@ -255,7 +256,7 @@ ${incomingLine}
         pendingMergeTarget = incomingName;
 
         document.getElementById("local-editor").innerText = mergedLines.join("\n");
-
+		updateUI()
         log("MERGE CONFLICT!", "#fb923c");
         return;
     }
