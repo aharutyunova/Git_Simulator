@@ -1,320 +1,594 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Qwallity GitLab</title>
-    <script src="https://cdn.jsdelivr.net/npm/@gitgraph/js"></script>
+<meta charset="UTF-8">
+<title>Qwallity GitLab</title>
+<script src="https://cdn.jsdelivr.net/npm/@gitgraph/js"></script>
+
 <style>
-    :root { 
-        --bg-deep: #0f172a;    
-        --panel: #1e293b;      
-        --border: #334155;     
-        --text: #f1f5f9;       
-        --orange: #f97316;     
-        --green-btn: #22c55e;  
-        --blue-btn: #3b82f6;   
-        --editor-bg: #000000;  
-        --code-text: #e2e8f0; 
-        --main-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
 
-    body { margin: 0; background: var(--bg-deep); color: var(--text); font-family: var(--main-font); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    .header { padding: 12px 20px; background: var(--bg-deep); border-bottom: 2px solid var(--orange); display: flex; justify-content: space-between; align-items: center; }
-    .brand-title { font-weight: bold; color: var(--orange); font-size: 1.1rem; letter-spacing: 1px; }
-    
-    .layout { display: flex; flex: 1; gap: 12px; padding: 12px; overflow: hidden; }
-    .column { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); overflow: hidden; }
-    .header-col { padding: 8px 4px; background: var(--panel); border-bottom: 1px solid var(--border); text-align: center; font-size: 10px; color: #cbd5e1; font-weight: bold; text-transform: uppercase; }
-    
-    .editor { flex: 1; padding: 16px; font-size: 14px; background: var(--editor-bg); outline: none; white-space: pre-wrap; color: var(--code-text); overflow-y: auto; line-height: 1.6; font-family: 'Consolas', monospace; border: none; }
-    .controls { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--border); background: var(--panel); }
-    
-    button { padding: 10px; border-radius: 4px; border: 1px solid var(--border); background: #334155; color: white; cursor: pointer; font-size: 11px; font-weight: bold; }
-    button:hover { filter: brightness(1.2); }
+:root { 
+--bg-deep:#0f172a;
+--panel:#1e293b;
+--border:#334155;
+--text:#f1f5f9;
+--orange:#f97316;
+--green-btn:#22c55e;
+--blue-btn:#3b82f6;
+--editor-bg:#000000;
+--code-text:#e2e8f0;
+--main-font:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
 
-    .btn-orange, #resolve-btn { background: var(--orange) !important; border: none; color: white !important; }
-    #resolve-btn { display: none; grid-column: span 2; margin-bottom: 4px; animation: pulse 2s infinite; }
-    
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-    .btn-green { background: var(--green-btn) !important; color: #052e16 !important; border: none; }
-    .btn-blue { background: var(--blue-btn) !important; border: none; }
+body{
+margin:0;
+background:var(--bg-deep);
+color:var(--text);
+font-family:var(--main-font);
+display:flex;
+flex-direction:column;
+height:100vh;
+overflow:hidden;
+}
 
-    #terminal { background: #020617; color: #e2e8f0; font-size: 12px; padding: 12px; height: 140px; border-top: 1px solid var(--border); overflow-y: auto; font-family: 'Consolas', monospace; }
-    
-    #graph-panel { width: 340px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-    #graph-container-wrapper { flex: 1; overflow-y: auto; padding: 10px; background: var(--panel); }
-    #graph-container { min-height: 100%; }
-    
-    input { grid-column: span 2; padding: 10px; background: var(--editor-bg); color: white; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 4px; outline: none; }
-    select { background: var(--editor-bg); color: white; border: 1px solid var(--border); padding: 4px; border-radius: 4px; outline: none; }
+.header{
+padding:12px 20px;
+background:var(--bg-deep);
+border-bottom:2px solid var(--orange);
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.brand-title{
+font-weight:bold;
+color:var(--orange);
+font-size:1.1rem;
+letter-spacing:1px;
+}
+
+.layout{
+display:flex;
+flex:1;
+gap:12px;
+padding:12px;
+overflow:hidden;
+}
+
+.column{
+flex:1;
+display:flex;
+flex-direction:column;
+border:1px solid var(--border);
+border-radius:8px;
+background:var(--panel);
+overflow:hidden;
+}
+
+.header-col{
+padding:8px 4px;
+background:var(--panel);
+border-bottom:1px solid var(--border);
+text-align:center;
+font-size:10px;
+color:#cbd5e1;
+font-weight:bold;
+text-transform:uppercase;
+}
+
+/* editor layout */
+
+.editor-wrapper{
+display:flex;
+flex:1;
+overflow:hidden;
+}
+
+.line-numbers{
+background:#020617;
+color:#64748b;
+padding:16px 8px;
+font-size:14px;
+font-family:Consolas,monospace;
+text-align:right;
+border-right:1px solid var(--border);
+user-select:none;
+line-height:1.6;
+min-width:40px;
+}
+
+.editor{
+flex:1;
+padding:16px;
+font-size:14px;
+background:var(--editor-bg);
+outline:none;
+white-space:pre-wrap;
+color:var(--code-text);
+overflow-y:auto;
+line-height:1.6;
+font-family:'Consolas',monospace;
+border:none;
+}
+
+.controls{
+padding:12px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+border-top:1px solid var(--border);
+background:var(--panel);
+}
+
+button{
+padding:10px;
+border-radius:4px;
+border:1px solid var(--border);
+background:#334155;
+color:white;
+cursor:pointer;
+font-size:11px;
+font-weight:bold;
+}
+
+button:hover{
+filter:brightness(1.2);
+}
+
+.btn-orange,#resolve-btn{
+background:var(--orange)!important;
+border:none;
+color:white!important;
+}
+
+#resolve-btn{
+display:none;
+grid-column:span 2;
+margin-bottom:4px;
+animation:pulse 2s infinite;
+}
+
+@keyframes pulse{
+0%{opacity:1;}
+50%{opacity:.7;}
+100%{opacity:1;}
+}
+
+.btn-green{
+background:var(--green-btn)!important;
+color:#052e16!important;
+border:none;
+}
+
+.btn-blue{
+background:var(--blue-btn)!important;
+border:none;
+}
+
+#terminal{
+background:#020617;
+color:#e2e8f0;
+font-size:12px;
+padding:12px;
+height:140px;
+border-top:1px solid var(--border);
+overflow-y:auto;
+font-family:'Consolas',monospace;
+}
+
+#graph-panel{
+width:340px;
+background:var(--panel);
+border-left:1px solid var(--border);
+display:flex;
+flex-direction:column;
+}
+
+#graph-container-wrapper{
+flex:1;
+overflow-y:auto;
+padding:10px;
+background:var(--panel);
+}
+
+#graph-container{
+min-height:100%;
+}
+
+input{
+grid-column:span 2;
+padding:10px;
+background:var(--editor-bg);
+color:white;
+border:1px solid var(--border);
+border-radius:4px;
+margin-bottom:4px;
+outline:none;
+}
+
+select{
+background:var(--editor-bg);
+color:white;
+border:1px solid var(--border);
+padding:4px;
+border-radius:4px;
+outline:none;
+}
+
 </style>
 </head>
+
 <body>
 
 <div class="header">
-    <div class="brand-title">Qwallity GitLab</div>
-    <div style="font-size: 0.8rem;">Active Branch: <select id="branchSelect" onchange="switchBranch()"></select></div>
+<div class="brand-title">Qwallity GitLab</div>
+<div style="font-size:.8rem;">Active Branch:
+<select id="branchSelect" onchange="switchBranch()"></select>
+</div>
 </div>
 
 <div class="layout">
-    <div class="column">
-        <div class="header-col">Cloud: Remote (origin)</div>
-        <div id="remote-editor" class="editor"></div>
-        <div class="controls">
-            <button onclick="simulateRemotePush()" class="btn-orange" style="grid-column: span 2;">Simulate Teammate Push</button>
-        </div>
-    </div>
 
-    <div class="column">
-        <div class="header-col">Local: Workstation</div>
-        <div id="local-editor" class="editor" contenteditable="true"></div>
-        <div class="controls">
-            <input type="text" id="commitInput" placeholder="Enter commit message...">
-            <button id="resolve-btn" onclick="markAsResolved()">Mark as Resolved</button>
-            <button onclick="gitAdd()" class="btn-blue">git add .</button>
-            <button onclick="gitCommit()" class="btn-green">git commit</button>
-            <button onclick="gitPush()" class="btn-green">git push</button>
-            <button onclick="gitPull()" class="btn-blue">git pull</button>
-            <button onclick="createNewBranch()">git branch</button>
-            <button onclick="gitMerge()" class="btn-orange">git merge</button>
-        </div>
-        <div id="terminal"></div>
-    </div>
+<div class="column">
 
-    <div id="graph-panel">
-        <div class="header-col">Visual History</div>
-        <div id="graph-container-wrapper">
-            <div id="graph-container"></div>
-        </div>
-    </div>
+<div class="header-col">Cloud: Remote (origin)</div>
+
+<div class="editor-wrapper">
+<div id="remote-lines" class="line-numbers"></div>
+<div id="remote-editor" class="editor"></div>
+</div>
+
+<div class="controls">
+<button onclick="simulateRemotePush()" class="btn-orange" style="grid-column:span 2;">Simulate Teammate Push</button>
+</div>
+
+</div>
+
+<div class="column">
+
+<div class="header-col">Local: Workstation</div>
+
+<div class="editor-wrapper">
+<div id="local-lines" class="line-numbers"></div>
+<div id="local-editor" class="editor" contenteditable="true"></div>
+</div>
+
+<div class="controls">
+
+<input type="text" id="commitInput" placeholder="Enter commit message...">
+
+<button id="resolve-btn" onclick="markAsResolved()">Mark as Resolved</button>
+
+<button onclick="gitAdd()" class="btn-blue">git add .</button>
+<button onclick="gitCommit()" class="btn-green">git commit</button>
+<button onclick="gitPush()" class="btn-green">git push</button>
+<button onclick="gitPull()" class="btn-blue">git pull</button>
+<button onclick="createNewBranch()">git branch</button>
+<button onclick="gitMerge()" class="btn-orange">git merge</button>
+
+</div>
+
+<div id="terminal"></div>
+
+</div>
+
+<div id="graph-panel">
+<div class="header-col">Visual History</div>
+<div id="graph-container-wrapper">
+<div id="graph-container"></div>
+</div>
+</div>
+
 </div>
 
 <script>
-const uiFont = "12px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-const gitgraph = GitgraphJS.createGitgraph(document.getElementById("graph-container"), { 
-    template: GitgraphJS.templateExtend("metro", {
-        colors: ["#f97316", "#3b82f6", "#22c55e", "#a855f7", "#eab308"],
-        commit: { message: { displayAuthor: false, displayHash: false, font: uiFont }, dot: { size: 10 } },
-        branch: { label: { font: uiFont }, lineWidth: 3 }
-    }), 
-    orientation: "vertical-reverse" 
-});
 
-let branchData = { "master": "Line 1\nLine 2\nLine 3" };
-let remoteData = "Line 1\nLine 2\nLine 3";
-let lastPulledRemote = remoteData; 
-let stagedData = null; 
-let isConflictMode = false;
-let resolved = false;
-let pendingMergeTarget = null;
+const uiFont="12px 'Segoe UI',Tahoma,Geneva,Verdana,sans-serif";
 
-let branches = { "master": gitgraph.branch("master") };
-let currentBranchName = "master";
+const gitgraph=GitgraphJS.createGitgraph(
+document.getElementById("graph-container"),
+{
+template:GitgraphJS.templateExtend("metro",{
+colors:["#f97316","#3b82f6","#22c55e","#a855f7","#eab308"],
+commit:{message:{displayAuthor:false,displayHash:false,font:uiFont},dot:{size:10}},
+branch:{label:{font:uiFont},lineWidth:3}
+}),
+orientation:"vertical-reverse"
+}
+);
+
+let branchData={"master":"Line 1\nLine 2\nLine 3"};
+let remoteData="Line 1\nLine 2\nLine 3";
+let lastPulledRemote=remoteData;
+let stagedData=null;
+let isConflictMode=false;
+let resolved=false;
+let pendingMergeTarget=null;
+
+let branches={"master":gitgraph.branch("master")};
+let currentBranchName="master";
 
 branches["master"].commit("Initial Setup");
+
 updateUI(true);
 
-function log(msg, color = "#cbd5e1") {
-    const term = document.getElementById("terminal");
-    term.innerHTML += `<div><span style="color:#64748b;">$</span> <span style="color:${color}">${msg}</span></div>`;
-    term.scrollTop = term.scrollHeight;
+function updateLineNumbers(){
+
+function render(editor,line){
+
+const text=document.getElementById(editor).innerText;
+const lines=text.split("\n").length;
+
+let nums="";
+
+for(let i=1;i<=lines;i++){
+nums+=i+"<br>";
 }
 
-function updateUI(refreshLocal = false) {
-    document.getElementById("remote-editor").innerText = remoteData;
-    if (refreshLocal)
-        document.getElementById("local-editor").innerText = branchData[currentBranchName];
-
-	document.getElementById("resolve-btn").style.display = isConflictMode ? "grid" : "none";
-    const select = document.getElementById("branchSelect");
-    select.innerHTML = Object.keys(branches)
-        .map(b => `<option value="${b}" ${b===currentBranchName?'selected':''}>${b}</option>`)
-        .join('');
-
-    const wrapper = document.getElementById("graph-container-wrapper");
-    setTimeout(() => { wrapper.scrollTop = wrapper.scrollHeight; }, 50);
+document.getElementById(line).innerHTML=nums;
 }
 
-function gitAdd() {
-    if (isConflictMode && !resolved)
-        return log("Resolve conflict first!", "#fb923c");
+render("local-editor","local-lines");
+render("remote-editor","remote-lines");
 
-    stagedData = document.getElementById("local-editor").innerText;
-    log("Changes staged.");
 }
 
-function gitCommit() {
-    if (isConflictMode && !resolved)
-        return log("Resolve conflict before committing!", "#f87171");
+document.getElementById("local-editor")
+.addEventListener("input",updateLineNumbers);
 
-    if (!stagedData)
-        return log("Nothing to commit. Use git add first.", "#f87171");
-
-    const msg = document.getElementById("commitInput").value.trim();
-    if (!msg)
-        return log("Error: Message required.", "#f87171");
-
-    branchData[currentBranchName] = stagedData;
-
-	 if (pendingMergeTarget) {
-		branches[currentBranchName].commit(`Merge ${pendingMergeTarget}`);
-		lastPulledRemote = remoteData;
-		pendingMergeTarget = null;
-	} else {
-		branches[currentBranchName].commit(msg);
-	}
-
-    if (resolved)
-        lastPulledRemote = remoteData;
-
-    stagedData = null;
-    resolved = false;
-    isConflictMode = false;
-    document.getElementById("commitInput").value = "";
-
-    updateUI(true);
-    log(`Committed: ${msg}`, "#4ade80");
+function log(msg,color="#cbd5e1"){
+const term=document.getElementById("terminal");
+term.innerHTML+=`<div><span style="color:#64748b;">$</span> <span style="color:${color}">${msg}</span></div>`;
+term.scrollTop=term.scrollHeight;
 }
 
-function gitPush() {
-    if (remoteData !== lastPulledRemote)
-        return log("Push Rejected: Remote is ahead. Pull first.", "#f87171");
+function updateUI(refreshLocal=false){
 
-    remoteData = branchData[currentBranchName];
-    lastPulledRemote = remoteData;
-    updateUI();
-    log("Pushed successfully.", "#4ade80");
+document.getElementById("remote-editor").innerText=remoteData;
+
+if(refreshLocal)
+document.getElementById("local-editor").innerText=branchData[currentBranchName];
+
+document.getElementById("resolve-btn").style.display=isConflictMode?"grid":"none";
+
+const select=document.getElementById("branchSelect");
+
+select.innerHTML=Object.keys(branches)
+.map(b=>`<option value="${b}" ${b===currentBranchName?'selected':''}>${b}</option>`)
+.join('');
+
+updateLineNumbers();
+
+const wrapper=document.getElementById("graph-container-wrapper");
+
+setTimeout(()=>{
+wrapper.scrollTop=wrapper.scrollHeight;
+},50);
+
 }
 
-function gitPull() {
-    if (isConflictMode)
-        return log("Resolve current conflict first!", "#f87171");
+function gitAdd(){
 
-    log("Fetching from origin...");
-    handleMergeLogic(remoteData, "origin/master", true);
+if(isConflictMode&&!resolved)
+return log("Resolve conflict first!","#fb923c");
+
+stagedData=document.getElementById("local-editor").innerText;
+
+log("Changes staged.");
+
 }
 
-function gitMerge() {
-    if (isConflictMode)
-        return log("Resolve current conflict first!", "#f87171");
+function gitCommit(){
 
-    const target = prompt("Merge branch:");
-    if (!target || !branches[target])
-        return log("Error: Branch not found.", "#f87171");
+if(isConflictMode&&!resolved)
+return log("Resolve conflict before committing!","#f87171");
 
-    handleMergeLogic(branchData[target], target, false);
+if(!stagedData)
+return log("Nothing to commit. Use git add first.","#f87171");
+
+const msg=document.getElementById("commitInput").value.trim();
+
+if(!msg)
+return log("Error: Message required.","#f87171");
+
+branchData[currentBranchName]=stagedData;
+
+if(pendingMergeTarget){
+branches[currentBranchName].commit(`Merge ${pendingMergeTarget}`);
+lastPulledRemote=remoteData;
+pendingMergeTarget=null;
+}else{
+branches[currentBranchName].commit(msg);
 }
 
-/* ========= UPDATED LINE-BASED MERGE LOGIC ========= */
+if(resolved)
+lastPulledRemote=remoteData;
 
-function handleMergeLogic(incomingContent, incomingName, isPull) {
+stagedData=null;
+resolved=false;
+isConflictMode=false;
 
-    const localContent = document.getElementById("local-editor").innerText;
+document.getElementById("commitInput").value="";
 
-    const localLines = localContent.split("\n");
-    const incomingLines = incomingContent.split("\n");
+updateUI(true);
 
-    const maxLength = Math.max(localLines.length, incomingLines.length);
+log(`Committed: ${msg}`,"#4ade80");
 
-    let mergedLines = [];
-    let conflictDetected = false;
+}
 
-    for (let i = 0; i < maxLength; i++) {
+function gitPush(){
 
-        const localLine = localLines[i];
-        const incomingLine = incomingLines[i];
+if(remoteData!==lastPulledRemote)
+return log("Push Rejected: Remote is ahead. Pull first.","#f87171");
 
-        if (localLine === incomingLine) {
-            mergedLines.push(localLine || "");
-        }
-        else if (localLine === undefined) {
-            mergedLines.push(incomingLine);
-        }
-        else if (incomingLine === undefined) {
-            mergedLines.push(localLine);
-        }
-        else {
-            conflictDetected = true;
+remoteData=branchData[currentBranchName];
+lastPulledRemote=remoteData;
 
-            mergedLines.push(
+updateUI();
+
+log("Pushed successfully.","#4ade80");
+
+}
+
+function gitPull(){
+
+if(isConflictMode)
+return log("Resolve current conflict first!","#f87171");
+
+log("Fetching from origin...");
+
+handleMergeLogic(remoteData,"origin/master",true);
+
+}
+
+function gitMerge(){
+
+if(isConflictMode)
+return log("Resolve current conflict first!","#f87171");
+
+const target=prompt("Merge branch:");
+
+if(!target||!branches[target])
+return log("Error: Branch not found.","#f87171");
+
+handleMergeLogic(branchData[target],target,false);
+
+}
+
+function handleMergeLogic(incomingContent,incomingName,isPull){
+
+const localContent=branchData[currentBranchName];
+
+const localLines=localContent.split("\n");
+const incomingLines=incomingContent.split("\n");
+
+const maxLength=Math.max(localLines.length,incomingLines.length);
+
+let mergedLines=[];
+let conflictDetected=false;
+
+for(let i=0;i<maxLength;i++){
+
+const localLine=localLines[i];
+const incomingLine=incomingLines[i];
+
+if(localLine===incomingLine){
+mergedLines.push(localLine||"");
+}
+else if(localLine===undefined){
+mergedLines.push(incomingLine);
+}
+else if(incomingLine===undefined){
+mergedLines.push(localLine);
+}
+else{
+
+conflictDetected=true;
+
+mergedLines.push(
 `<<<<<<< HEAD (${currentBranchName})
 ${localLine}
 =======
 ${incomingLine}
 >>>>>>> ${incomingName}`
-            );
-        }
-    }
+);
 
-    if (conflictDetected) {
-
-        isConflictMode = true;
-        resolved = false;
-
-        // IMPORTANT FIX:
-        // Always track merge source, even for pull
-        pendingMergeTarget = incomingName;
-
-        document.getElementById("local-editor").innerText = mergedLines.join("\n");
-		updateUI()
-        log("MERGE CONFLICT!", "#fb923c");
-        return;
-    }
-
-    // CLEAN MERGE
-    branchData[currentBranchName] = mergedLines.join("\n");
-
-    if (isPull) {
-        lastPulledRemote = remoteData;
-        branches[currentBranchName].commit("Merge remote changes");
-    } else {
-        branches[currentBranchName].merge(branches[incomingName]);
-    }
-
-    updateUI(true);
-    log(`Clean merge from ${incomingName}.`, "#4ade80");
 }
 
-function markAsResolved() {
-    const content = document.getElementById("local-editor").innerText;
-
-    if (content.includes("<<<<<<<"))
-        return log("Error: Clear conflict markers first!", "#f87171");
-
-    resolved = true;
-    isConflictMode = false;
-
-    log("Conflict resolved. Run git add, then git commit.", "#fb923c");
 }
 
-function simulateRemotePush() {
-    remoteData += "\n// Remote Change";
-    updateUI();
-    log("Remote updated. You are behind.", "#fb923c");
+if(conflictDetected){
+
+isConflictMode=true;
+resolved=false;
+
+pendingMergeTarget=incomingName;
+
+document.getElementById("local-editor").innerText=mergedLines.join("\n");
+
+updateUI();
+
+log("MERGE CONFLICT!","#fb923c");
+
+return;
+
 }
 
-function createNewBranch() {
-    if (isConflictMode)
-        return log("Resolve conflict before branching.", "#f87171");
+branchData[currentBranchName]=mergedLines.join("\n");
 
-    const name = prompt("New branch name:");
-    if (name && !branches[name]) {
-        branches[name] = branches[currentBranchName].branch(name);
-        branchData[name] = document.getElementById("local-editor").innerText;
-        currentBranchName = name;
-        updateUI(true);
-        log(`Branch ${name} created.`);
-    }
+if(isPull){
+lastPulledRemote=remoteData;
+branches[currentBranchName].commit("Merge remote changes");
+}else{
+branches[currentBranchName].merge(branches[incomingName]);
 }
 
-function switchBranch() {
-    if (isConflictMode)
-        return log("Resolve conflict before switching.", "#f87171");
+updateUI(true);
 
-    currentBranchName = document.getElementById("branchSelect").value;
-    updateUI(true);
-    log(`Switched to ${currentBranchName}`);
+log(`Clean merge from ${incomingName}.`,"#4ade80");
+
 }
+
+function markAsResolved(){
+
+const content=document.getElementById("local-editor").innerText;
+
+if(content.includes("<<<<<<<"))
+return log("Error: Clear conflict markers first!","#f87171");
+
+resolved=true;
+isConflictMode=false;
+
+log("Conflict resolved. Run git add, then git commit.","#fb923c");
+
+}
+
+function simulateRemotePush(){
+
+remoteData+="\n// Remote Change";
+
+updateUI();
+
+log("Remote updated. You are behind.","#fb923c");
+
+}
+
+function createNewBranch(){
+
+if(isConflictMode)
+return log("Resolve conflict before branching.","#f87171");
+
+const name=prompt("New branch name:");
+
+if(name&&!branches[name]){
+
+branches[name]=branches[currentBranchName].branch(name);
+
+branchData[name]=document.getElementById("local-editor").innerText;
+
+currentBranchName=name;
+
+updateUI(true);
+
+log(`Branch ${name} created.`);
+
+}
+
+}
+
+function switchBranch(){
+
+if(isConflictMode)
+return log("Resolve conflict before switching.","#f87171");
+
+currentBranchName=document.getElementById("branchSelect").value;
+
+updateUI(true);
+
+log(`Switched to ${currentBranchName}`);
+
+}
+
 </script>
 </body>
 </html>
